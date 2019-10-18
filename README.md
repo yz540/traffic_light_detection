@@ -62,45 +62,9 @@ train_env                /home/yanz/anaconda3/envs/train_env
 
 ```
 
-
-
 # 2. [Label Images with predefined labels](https://github.com/tzutalin/labelImg)
 
-The images manually annotated were labelled with LabelImg. Once the labelImg is launched, the labels should be labelled according to the labels are defined in the label.pbtxt as following in our case:
-
-```
-
-item {
-
-  id: 1
-
-  name: 'green'
-
-}
-
-
-
-item {
-
-  id: 2
-
-  name: 'red'
-
-}
-
-
-
-item {
-
-  id: 3
-
-  name: 'yellow'
-
-}
-
-
-
-```
+The images manually annotated were labelled with LabelImg. Once the labelImg is launched, the labels should be labelled according to the labels are defined in the [label.pbtxt](https://github.com/yz540/traffic_light_detection/blob/master/label.pbtxt)
 
 Install LabelImg:
 
@@ -125,14 +89,10 @@ python3 labelImg.py
 
 
 # 3. [Create Tensorflow record from our dataset](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/using_your_own_dataset.md)
-
-
-
 In order to train the model using the object detection API the images needs to be fed as a TensorFlow Record. 
+If you want to use existing tf records, you can skip the labelling and creating tf record step. But make sure you use their corresponding label file.
 
-
-
-If tensorflow not yet installed:
+ - If tensorflow not yet installed:
 
 ```
 
@@ -144,9 +104,7 @@ python -c "import tensorflow as tf;print(tf.reduce_sum(tf.random.normal([1000, 1
 
 ```
 
-
-
-If tensorflow object detection API not yet installed:
+ - If tensorflow object detection API not yet installed:
 
 ```
 
@@ -164,7 +122,7 @@ pip install --user matplotlib
 
 ```
 
-
+ - Install the coco api
 
 ```
 
@@ -178,9 +136,7 @@ cp -r pycocotools <path_to_tensorflow>/models/research/
 
 ```
 
-
-
-Manual protobuf-compiler
+ - Manual protobuf-compiler
 
 ```
 
@@ -194,71 +150,67 @@ protoc object_detection/protos/*.proto --python_out=.
 
 ```
 
-
-
-Add Libraries to PYTHONPATH
-
+ - Add Libraries to PYTHONPATH
 
 
 ```
 
-# From tensorflow/models/research/
+# From tensorflow/models/research/, if later in run time, the object detection module not found error occurs, you can run the following command again
 
 export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/slim
 
 ```
 
-
-
-Test the installation:
+ - Test the installation, you should see OK in the result.
 
 ```python object_detection/builders/model_builder_test.py```
 
+ - Then create tf record using the following command, you can change the path to ```--data_dir=, --labels_dir=, --labels_map_path=, --output_path``` to your own local path.
+
+```
+python create_tf_record.py  --data_dir=sim_images --labels_dir=sim_labels --labels_map_path=label.pbtxt --output_path=sim_tf_records --split_train_test=0.25
+```
+The create_tf_record.py can be found [here](https://github.com/yz540/traffic_light_detection/blob/master/create_tf_record.py)
 If you have errors run the ``` python create_tfrecord.py```, you might need to install some missing modules.
 
 ```
-
 pip install tqdm
-
 pip install sklearn
-
-
-
 ```
 
+The result should be as follows:
+```
+Total samples: 143
+WARNING:tensorflow:From create_tf_record.py:73: The name tf.python_io.TFRecordWriter is deprecated. Please use tf.io.TFRecordWriter instead.
 
+W1018 10:43:08.180608 140231217743680 deprecation_wrapper.py:119] From create_tf_record.py:73: The name tf.python_io.TFRecordWriter is deprecated. Please use tf.io.TFRecordWriter instead.
+
+Converting:   0%|                                  | 0/107 [00:00<?, ? images/s]/home/yanz/trainmodel/models/research/object_detection/utils/dataset_util.py:79: FutureWarning: The behavior of this method will change in future versions. Use specific 'len(elem)' or 'elem is not None' test instead.
+  if not xml:
+Converting: 100%|███████████████████████| 107/107 [00:00<00:00, 255.49 images/s]
+TF record file for training created with 107 samples: sim_tf_records_train.record
+Converting: 100%|█████████████████████████| 36/36 [00:00<00:00, 266.20 images/s]
+TF record file for validation created with 36 samples: sim_tf_records_eval.record
 
 ```
-
-python create_tf_record.py --data_dir=data/simulator --labels_dir=data/simulator/labels --labels_map_path=config/labels_map.pbtxt --output_path=data/simulator/simulator.record
-
-```
-
-
-
-If you want to use existing tf records, you can skip the labelling step. But make sure you use their corresponding label file.
-
-
 
 # 4. Train the traffic light classification model
 
 The [object detection](https://github.com/tensorflow/models/tree/master/research/object_detection) is the starting point.
 
-Download a model from the [model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md)
+ - Download a model from the [model zoo](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md)
 
 For instance, the ssdlite_mobilenet_v2_coco:
 
-``` wget http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
-
-
+``` 
+wget http://download.tensorflow.org/models/object_detection/ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
 
 tar -xvf ssdlite_mobilenet_v2_coco_2018_05_09.tar.gz
 
 ```
 
 
-
-[Configure the pipeline.config file](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/configuring_jobs.md)
+ - [Configure the pipeline.config file](https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/configuring_jobs.md)
 
 Make the following change to the pipeline.config:
 
@@ -287,8 +239,7 @@ The num_examples is the number of evaluation examples depends on the number of i
 The label_map_path and input_path should be changed according to your training mode: local or GCP. The above example is on GCP.
 
 
-
-
+ - Train the model based on the chosen model.
 
 ## Train locally:
 
@@ -346,9 +297,9 @@ gcloud init
 
  - Upload your data and pre-trained model to your bucket: you can either use the command line with gsutil cp ... or the web GUI on your buckets page.
 
- - Modify and upload your pipeline.config: change the paths for the model and data to the corresponding location in your bucket in the form gs://PRE-TRAINED_MODEL_DIR and gs://DATA_DIR
+ - Modify and upload your [pipeline.config](https://github.com/yz540/traffic_light_detection/blob/master/pipeline.config): change the paths for the model and data to the corresponding location in your bucket in the form gs://PRE-TRAINED_MODEL_DIR and gs://DATA_DIR
 
- - Define or redefine the following environment variable in your terminal on local machine: 
+ - Define or redefine the following environment variable in your terminal on local machine. You can find env.yaml [here](https://github.com/yz540/traffic_light_detection/blob/master/env.yaml): 
 
 ```
 
@@ -430,7 +381,7 @@ bash Anaconda3-2019.03-Linux-x86_64.sh
 
 ```
 
- - Install env on local machine:
+ - Install corresponding env on local machine:
 
 ```
 
@@ -448,9 +399,7 @@ conda install pillow lxml matplotlib
 
 ```
 
-
-
- - Export in tf 1.4:
+ - Install object detection for tensorflow 1.4. These steps are simillar to the ones above. The only difference is to find the corresponding version for tensorflow 1.4.
 
 ```
 
@@ -461,7 +410,6 @@ cd temp
 git checkout d135ed9c04bc9c60ea58f493559e60bc7673beb7 
 
 
-
 cd .. 
 
 mkdir exporter
@@ -469,7 +417,6 @@ mkdir exporter
 cp -r temp/research/object_detection exporter/object_detection 
 
 cp -r temp/research/slim exporter/slim 
-
 
 
 cd temp/research
@@ -486,7 +433,10 @@ conda env list
 
 conda activate tensorflow_1.4 
 
+```
 
+ - Install the corresponding version of Protocol buffer:
+```
 
 wget "https://github.com/protocolbuffers/protobuf/releases/download/v3.4.0/protoc-3.4.0-linux-x86_64.zip" 
 
@@ -499,30 +449,21 @@ cd exporter/
 protoc object_detection/protos/*.proto --python_out=.   
 
 
-
 export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/slim 
+```
 
-
+ - Export the model in tf 1.4:
+```
 
 mkdir /home/yz540/ssd_mobilenet_v1_coco_2018_01_28/new/sim_new_export_model_v1.4/                                                                                                                                                                                                                  
 
-
-
 EXPORT_DIR="/home/yz540/ssd_mobilenet_v1_coco_2018_01_28/new/sim_new_export_model_v1.4/" 
-
-
 
 TRAINED_CKPT_PREFIX=/home/yz540/ssd_mobilenet_v1_coco_2018_01_28/new/sim_new/sim/model.ckpt-500013  
 
-
-
 PIPELINE_CONFIG_PATH=/home/yz540/ssd_mobilenet_v1_coco_2018_01_28/pipeline.config
 
-
-
 INPUT_TYPE=image_tensor 
-
-
 
 python object_detection/export_inference_graph.py     --input_type=${INPUT_TYPE}     --pipeline_config_path=${PIPELINE_CONFIG_PATH}     --trained_checkpoint_prefix=${TRAINED_CKPT_PREFIX}     --output_directory=${EXPORT_DIR} 
 
